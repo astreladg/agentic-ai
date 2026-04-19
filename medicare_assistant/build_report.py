@@ -67,6 +67,8 @@ def title_block():
 
 
 def info_table():
+    live_url = "https://agentic-ai-uthzcqk62q2k7hvssdtnez.streamlit.app/"
+    gh_url = "https://github.com/astreladg/agentic-ai"
     rows = [
         ["Name", "Ashish"],
         ["Project", "MediCare General Hospital — Patient Assistant"],
@@ -74,6 +76,8 @@ def info_table():
         ["Batch / Program", "ExcelR & KIIT Agentic AI Program"],
         ["Framework", "LangGraph + ChromaDB + Streamlit"],
         ["LLM", "Groq (llama-3.3-70b-versatile / llama-3.1-8b-instant)"],
+        ["GitHub", Paragraph(f'<link href="{gh_url}"><font color="#1565c0">{gh_url}</font></link>', styles["Body"])],
+        ["Live App", Paragraph(f'<link href="{live_url}"><font color="#1565c0">{live_url}</font></link>', styles["Body"])],
     ]
     t = Table(rows, colWidths=[4.5*cm, 12.5*cm])
     t.setStyle(TableStyle([
