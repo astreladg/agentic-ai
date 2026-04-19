@@ -320,10 +320,24 @@ def load_agent():
     from langgraph.checkpoint.memory import MemorySaver
     from medicare_assistant.state import MediCareState
 
+    # Read from st.secrets first (Streamlit Cloud), then fall back to env vars (.env local)
+    def _cfg(key, default=None):
+        try:
+            if key in st.secrets:
+                return st.secrets[key]
+        except Exception:
+            pass
+        return _os.getenv(key, default)
+
+    api_key = _cfg("GROQ_API_KEY")
+    if not api_key:
+        st.error("❌ GROQ_API_KEY not configured. Add it in Streamlit → Settings → Secrets.")
+        st.stop()
+
     llm = ChatGroq(
-        model=_os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        model=_cfg("GROQ_MODEL", "llama-3.1-8b-instant"),
         temperature=0,
-        groq_api_key=_os.getenv("GROQ_API_KEY"),
+        groq_api_key=api_key,
     )
     embedder, collection = build_knowledge_base()
     setup_dependencies(llm, embedder, collection)
