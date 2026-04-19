@@ -70,7 +70,8 @@ def info_table():
     live_url = "https://agentic-ai-uthzcqk62q2k7hvssdtnez.streamlit.app/"
     gh_url = "https://github.com/astreladg/agentic-ai"
     rows = [
-        ["Name", "Ashish"],
+        ["Name", "Ashish Kumar Yadav"],
+        ["Roll Number", "2328157"],
         ["Project", "MediCare General Hospital — Patient Assistant"],
         ["Domain", "Healthcare / Hospital Helpdesk"],
         ["Batch / Program", "ExcelR & KIIT Agentic AI Program"],
