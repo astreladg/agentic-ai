@@ -364,22 +364,42 @@ def build():
     ]:
         story += [b(line)]
 
+    story += [PageBreak()]
     story += [section("9. Future Improvements")]
+    story += [p(
+        "While the current system meets all capstone requirements — faithful RAG, multi-route "
+        "agent, memory, safety, RAGAS evaluation, Streamlit deployment — there are several "
+        "directions that would harden it for real hospital rollout:"
+    )]
     for line in [
-        "Add Hindi and Telugu language support so local patients in Hyderabad can converse in their preferred language.",
-        "Integrate a real-time slot booking API with the hospital's HIS so the bot can actually reserve appointments, not just describe the process.",
-        "Replace in-memory ChromaDB with a persistent server (or Pinecone / Weaviate) so the embedding index survives app restarts and scales across pods.",
-        "Introduce semantic chunking (paragraph-level with overlap) instead of document-level retrieval to boost context precision on fee and doctor-specific queries.",
-        "Build an admin panel where hospital staff can upload new policy PDFs that auto-trigger re-embedding and versioned collection updates.",
-        "Add voice input and text-to-speech output for accessibility on the hospital kiosk deployment.",
-        "Log all conversations (with PII redaction) into an analytics dashboard tracking unanswered queries, faithfulness-failure clusters, and peak-hour topics to guide content updates.",
-        "Implement authenticated WhatsApp and IVR channels so patients can reach the same agent via phone or chat app, reducing 040-99887766 helpline load.",
+        "<b>Multilingual support:</b> Add Hindi and Telugu so local patients in Hyderabad can converse in their preferred language, using a language-aware prompt layer and translated system instructions.",
+        "<b>Real slot booking:</b> Integrate with the hospital's HIS / EMR via a secure appointment API so the bot can actually reserve doctor slots rather than describing the booking process.",
+        "<b>Persistent vector store:</b> Replace in-memory ChromaDB with a persistent ChromaDB server — or a managed vector DB (Pinecone / Weaviate) — so the embedding index survives restarts and scales horizontally.",
+        "<b>Semantic chunking:</b> Split each document into paragraph-level chunks with overlap instead of document-level retrieval, boosting context precision on fee and doctor-specific queries.",
+        "<b>Admin re-embedding panel:</b> Build a secure admin UI where hospital staff can upload new policy PDFs and trigger automatic re-embedding with versioned collections — no code changes needed.",
+        "<b>Voice I/O:</b> Add speech-to-text input and text-to-speech output for accessibility, particularly useful for elderly patients and hospital kiosks.",
+        "<b>Analytics dashboard:</b> Log all conversations with PII redaction and surface metrics — unanswered queries, faithfulness-failure clusters, peak-hour topics — to guide content-team updates.",
+        "<b>Omnichannel reach:</b> Expose the same agent via authenticated WhatsApp Business and IVR gateways so patients can reach it over phone or chat, reducing load on the 040-99887766 helpline.",
+        "<b>Human escalation hand-off:</b> Detect low-confidence or sensitive conversations and warm-transfer to a live agent with the full chat history pre-loaded, so patients never hit a dead end.",
+        "<b>Continuous evaluation pipeline:</b> Schedule nightly RAGAS runs on a golden-question set, auto-alerting when faithfulness or context precision drifts below threshold after a KB edit.",
     ]:
         story += [b(line)]
 
     story += [Spacer(1, 14)]
     story += [Paragraph(
+        "<b>One thing I would improve first with more time</b>", styles["H2"])]
+    story += [p(
+        "I would introduce paragraph-level semantic chunking with overlapping windows. Right "
+        "now a single 400-word document about fees can dilute retrieval precision when only "
+        "the specialist line is relevant. Chunk-level retrieval would keep the context sent "
+        "to the LLM tightly focused, raising context precision and further reducing the chance "
+        "of drifting answers — a direct win for patient trust in fee and doctor-schedule queries."
+    )]
+
+    story += [Spacer(1, 14)]
+    story += [Paragraph(
         "<i>MediCare Patient Assistant — Agentic AI Capstone Project</i><br/>"
+        "Ashish Kumar Yadav · Roll 2328157 · ExcelR & KIIT Agentic AI Program<br/>"
         "Built with LangGraph · ChromaDB · Groq · Streamlit",
         styles["Footer"])]
 
