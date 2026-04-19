@@ -29,7 +29,21 @@ html, body, [class*="css"] {
 .stApp {
     background: linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #0a0f1e 100%) !important;
 }
-#MainMenu, footer, header { visibility: hidden; }
+#MainMenu, footer { visibility: hidden; }
+/* Keep header visible so the sidebar toggle arrow is clickable, but transparent */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: auto !important;
+}
+/* Make the sidebar collapse/expand control always visible and styled */
+button[data-testid="stSidebarCollapseButton"],
+button[data-testid="collapsedControl"] {
+    color: #e2e8f0 !important;
+    background: rgba(30, 64, 175, 0.6) !important;
+    border-radius: 8px !important;
+    visibility: visible !important;
+    display: flex !important;
+}
 .block-container {
     padding: 1.5rem 2rem 4rem !important;
     max-width: 960px !important;
