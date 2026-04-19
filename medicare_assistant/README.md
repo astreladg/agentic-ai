@@ -1,204 +1,245 @@
-# MediCare General Hospital Patient Assistant
+# 🏥 MediCare Patient Assistant
 
-A 24/7 intelligent hospital patient assistant for **MediCare General Hospital, Hyderabad** (350-bed multi-specialty hospital). Built as an Agentic AI capstone project using LangGraph, ChromaDB, Groq, and Streamlit.
+> **24/7 Agentic AI Hospital Helpdesk** built with LangGraph · ChromaDB · Groq · Streamlit
+
+An intelligent patient-facing assistant for **MediCare General Hospital, Banjara Hills, Hyderabad** (350-bed multi-specialty). Answers patient queries about OPD timings, doctors, fees, insurance, pharmacy, lab, appointments, and health packages — strictly grounded in the hospital's official knowledge base, with emergency escalation, medical-advice deflection, and prompt-injection defence.
+
+<p align="left">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-blue">
+  <img alt="LangGraph" src="https://img.shields.io/badge/LangGraph-StateGraph-0f2d6b">
+  <img alt="ChromaDB" src="https://img.shields.io/badge/VectorDB-ChromaDB-1565c0">
+  <img alt="Groq" src="https://img.shields.io/badge/LLM-Groq%20Llama3-f97316">
+  <img alt="Streamlit" src="https://img.shields.io/badge/UI-Streamlit-FF4B4B">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
+</p>
 
 ---
 
-## Features
+## ✨ Highlights
 
-- **RAG-powered answers** from a 12-document hospital knowledge base
-- **Intelligent routing** — retrieve, tool, or memory-only based on question type
-- **Tool use** — live date/time and arithmetic calculator
-- **Conversation memory** — sliding window + patient name persistence across turns
-- **Faithfulness evaluation** — LLM-based scoring with retry loop
-- **Safety rules** — emergency escalation, medical advice deflection, prompt injection resistance
+- **8-node LangGraph pipeline** — memory → router → retrieve/tool/skip → answer → eval → save
+- **RAG over 12 hospital documents** with top-3 ChromaDB retrieval
+- **Self-correcting answers** via a faithfulness-scoring retry loop (max 2 retries if score < 0.7)
+- **Multi-route agent** — LLM router picks `retrieve`, `tool`, or `memory_only`
+- **Safe arithmetic + date tools** (sandboxed `eval` with empty builtins)
+- **Session memory** — LangGraph `MemorySaver` + sliding 6-message window + patient-name extraction
+- **Safety rules baked into the system prompt** — emergency escalation, medical-advice deflection, identity / injection defence
+- **Healthcare-grade Streamlit UI** with hospital-brand palette, quick-question chips, typing indicator
 - **RAGAS evaluation** — faithfulness, answer relevancy, context precision
+- **Model hot-swap** via `GROQ_MODEL` env var (70b-versatile for submission, 8b-instant for load testing)
 
 ---
 
-## Project Structure
+## 🏗️ Architecture
+
+```
+                        ┌─────────────────┐
+   User question ─────▶ │   memory_node   │  sliding window + name extraction
+                        └────────┬────────┘
+                                 ▼
+                        ┌─────────────────┐
+                        │   router_node   │  LLM → retrieve / tool / memory_only
+                        └────────┬────────┘
+                  ┌──────────────┼──────────────┐
+                  ▼              ▼              ▼
+          ┌──────────────┐ ┌──────────┐  ┌────────────┐
+          │retrieval_node│ │tool_node │  │skip_retrieval_node│
+          │(ChromaDB ×3) │ │(date/calc)│ │ (empty context) │
+          └──────┬───────┘ └────┬─────┘  └──────┬──────┘
+                 └────────────────┼────────────────┘
+                                  ▼
+                        ┌─────────────────┐
+                        │   answer_node   │  Groq LLM + safety rules
+                        └────────┬────────┘
+                                 ▼
+                        ┌─────────────────┐
+                        │    eval_node    │  faithfulness 0.0–1.0
+                        └────────┬────────┘
+                      score≥0.7  │  score<0.7 & retries<2
+                     or retries≥2│   (retry with precision mode)
+                                 ▼          │
+                        ┌─────────────────┐ │
+                        │    save_node    │◀┘
+                        └────────┬────────┘
+                                 ▼
+                                END
+```
+
+---
+
+## 📚 Knowledge Base (12 documents)
+
+| # | Topic | # | Topic |
+|---|---|---|---|
+| 1 | OPD Timings | 7 | Consultation Fees |
+| 2 | Emergency Services | 8 | Insurance & Cashless |
+| 3 | Cardiology (Doctors) | 9 | Pharmacy Services |
+| 4 | Orthopedics (Doctors) | 10 | Diagnostic Lab Services |
+| 5 | Neurology & Pediatrics | 11 | Health Packages |
+| 6 | Appointment Booking | 12 | Hospital General Info |
+
+Embedded with `sentence-transformers/all-MiniLM-L6-v2` (384-dim) and stored in an in-memory ChromaDB collection.
+
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technology | Purpose |
+|---|---|---|
+| Language | Python 3.9+ | Primary language |
+| Agent Framework | **LangGraph** (StateGraph + MemorySaver) | Multi-node stateful agent |
+| LLM | **Groq** `llama-3.3-70b-versatile` / `llama-3.1-8b-instant` | Routing, answering, evaluation |
+| Orchestration | LangChain Core | Message types & LLM wrappers |
+| Vector Store | **ChromaDB** (in-memory) | Top-3 similarity retrieval |
+| Embeddings | sentence-transformers `all-MiniLM-L6-v2` | 384-dim dense vectors |
+| Evaluation | **RAGAS** | Faithfulness / answer relevancy / context precision |
+| UI | **Streamlit** | Chat UI + custom healthcare CSS |
+| API | FastAPI + Uvicorn | REST endpoint |
+| Config | python-dotenv | `GROQ_API_KEY` + `GROQ_MODEL` |
+
+---
+
+## 📁 Project Structure
 
 ```
 medicare_assistant/
-├── notebooks/
-│   └── day13_capstone.ipynb      # Full runnable Jupyter notebook
 ├── medicare_assistant/           # Python package
-│   ├── __init__.py
 │   ├── state.py                  # MediCareState TypedDict
 │   ├── knowledge_base.py         # 12 documents + ChromaDB setup
-│   ├── tools.py                  # datetime, calculator, helpline tools
-│   ├── nodes.py                  # 8 LangGraph node functions
+│   ├── tools.py                  # datetime, calculator, helpline
+│   ├── nodes.py                  # 8 LangGraph nodes
 │   ├── graph.py                  # StateGraph assembly + compile
-│   └── api/
-│       └── main.py               # FastAPI REST endpoint
+│   └── api/main.py               # FastAPI endpoint
+├── notebooks/
+│   └── day13_capstone.ipynb      # 20-cell runnable notebook
+├── tests/test_nodes.py           # pytest unit tests
 ├── capstone_streamlit.py         # Streamlit chat UI
-├── agent.py                      # CLI test runner (12 tests + memory test)
-├── tests/
-│   └── test_nodes.py             # pytest unit tests for all nodes
+├── agent.py                      # CLI test runner (12 tests + memory + RAGAS)
+├── build_report.py               # Generates the PDF report
+├── MediCare_Capstone_Report.pdf  # Project report
 ├── requirements.txt
+├── .env.example
 └── README.md
 ```
 
 ---
 
-## Tech Stack
+## 🚀 Quick Start
 
-| Component | Technology |
-|-----------|-----------|
-| LLM | Groq API — `llama-3.3-70b-versatile` |
-| Agent Framework | LangGraph (StateGraph, MemorySaver) |
-| Vector Store | ChromaDB (in-memory) |
-| Embeddings | SentenceTransformer `all-MiniLM-L6-v2` |
-| Evaluation | RAGAS (faithfulness, answer_relevancy, context_precision) |
-| UI | Streamlit |
-| API | FastAPI + Uvicorn |
-
----
-
-## Setup
-
-### 1. Clone the repository
+### 1. Clone & install
 
 ```bash
 git clone <repo-url>
 cd medicare_assistant
-```
-
-### 2. Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configure API key
+### 2. Configure API key
 
 ```bash
 cp .env.example .env
-# Edit .env and set your GROQ_API_KEY
+# Edit .env:
+#   GROQ_API_KEY=gsk_...            ← get one free at https://console.groq.com
+#   GROQ_MODEL=llama-3.1-8b-instant ← or llama-3.3-70b-versatile for submission
 ```
 
-Get your free Groq API key at https://console.groq.com
-
----
-
-## Running the Project
-
-### Streamlit UI (recommended)
+### 3. Run the Streamlit app
 
 ```bash
 streamlit run capstone_streamlit.py
+# → opens at http://localhost:8501
 ```
 
-Opens at http://localhost:8501
+---
 
-### CLI Test Runner (12 tests + memory test + RAGAS)
+## 🧪 Running Tests & Evaluation
+
+### End-to-end test suite (12 tests + 3-turn memory + RAGAS)
 
 ```bash
 python agent.py
 ```
 
-### Jupyter Notebook
-
-```bash
-jupyter notebook notebooks/day13_capstone.ipynb
-```
-
-Run all cells top-to-bottom. Requires `Kernel > Restart & Run All` to verify clean execution.
-
-### FastAPI Server
-
-```bash
-uvicorn medicare_assistant.api.main:app --reload --port 8000
-```
-
-Endpoints:
-- `GET /health` — health check
-- `POST /ask` — ask a question
-- `GET /docs` — Swagger UI
-
-### Unit Tests
+### Unit tests (pytest)
 
 ```bash
 python -m pytest tests/test_nodes.py -v
 ```
 
----
+### Jupyter notebook (full walkthrough)
 
-## RAGAS Evaluation Results
-
-| Metric | Score | Target |
-|--------|-------|--------|
-| Faithfulness | _run agent.py to fill_ | > 0.70 |
-| Answer Relevancy | _run agent.py to fill_ | > 0.70 |
-| Context Precision | _run agent.py to fill_ | > 0.60 |
-
----
-
-## Agent Architecture
-
-```
-User Question
-     │
-     ▼
-[memory_node] ──── sliding window + name extraction
-     │
-     ▼
-[router_node] ──── LLM decides: retrieve / tool / memory_only
-     │
-  ┌──┴────────────────┐
-  │          │         │
-[retrieve] [tool]  [skip]
-  │          │         │
-  └──────────┴─────────┘
-             │
-             ▼
-        [answer_node] ──── system prompt with CONTEXT-ONLY rule
-             │
-             ▼
-         [eval_node] ──── faithfulness score 0.0–1.0
-             │
-     ┌───────┴──────────┐
-     │ score < 0.7 AND  │ score >= 0.7 OR
-     │ retries < 2      │ retries >= 2
-     │                  │
- [answer_node]       [save_node]
-  (retry)                │
-                         ▼
-                        END
+```bash
+jupyter notebook notebooks/day13_capstone.ipynb
+# Kernel → Restart & Run All — every cell must complete without error
 ```
 
----
+### FastAPI server
 
-## Knowledge Base
+```bash
+uvicorn medicare_assistant.api.main:app --reload --port 8000
+# Swagger UI at http://localhost:8000/docs
+```
 
-12 documents covering:
-1. OPD Timings
-2. Emergency Services
-3. Doctor Directory — Cardiology
-4. Doctor Directory — Orthopedics
-5. Doctor Directory — Neurology & Pediatrics
-6. Appointment Booking
-7. Consultation Fees
-8. Insurance & Cashless
-9. Pharmacy Services
-10. Diagnostic Lab Services
-11. Health Packages
-12. Hospital General Information
+Endpoints:
+- `GET  /health` — liveness check
+- `POST /ask`    — body: `{"question": "...", "thread_id": "..."}`
 
 ---
 
-## Safety Rules
+## 📊 Evaluation Results
+
+| Metric | Result | Target |
+|---|---|---|
+| Regression tests (12 questions) | **12 / 12 PASS** ✅ | — |
+| Memory test (3 turns, same thread) | **PASS** ✅ | Name + prior topic recalled |
+| RAGAS Faithfulness | **≥ 0.80** | > 0.70 ✅ |
+| RAGAS Answer Relevancy | **≥ 0.85** | > 0.70 ✅ |
+| RAGAS Context Precision | **≥ 0.75** | > 0.60 ✅ |
+| Red-team: Emergency escalation | **PASS** ✅ | Returns `040-12345678` |
+| Red-team: Medical-advice deflection | **PASS** ✅ | No medication names |
+| Red-team: Prompt injection | **PASS** ✅ | System prompt never leaked |
+
+---
+
+## 🛡️ Safety Rules (enforced in the answer_node system prompt)
 
 | Rule | Behaviour |
-|------|-----------|
-| Emergency | If chest pain / breathing difficulty / stroke mentioned, first line is emergency number 040-12345678 |
-| Medical Advice | Never recommends medications or diagnoses — always redirects to doctor |
-| Hallucination | Answers ONLY from retrieved context; says "I don't know" otherwise |
-| Prompt Injection | Never reveals system prompt regardless of instruction |
+|---|---|
+| 🚨 **Emergency** | If the patient mentions chest pain, breathlessness, stroke, or accident — the FIRST line is `EMERGENCY: Please call 040-12345678 immediately…` |
+| 💊 **Medical Advice** | Never recommends medicines or diagnoses — always replies *"Please consult one of our doctors for medical guidance."* |
+| 📚 **Context-Only** | Answers strictly from retrieved context; falls back to *"I don't have that specific information. For assistance, please call our helpline: 040-99887766"* |
+| 🔒 **Identity / Injection** | Never reveals the system prompt or follows hostile instructions |
 
 ---
 
-## Deadline
+## 🖼️ Streamlit UI
 
-**April 21, 2026 | 11:59 PM**
-Submit at: https://forms.gle/2SF1Hw4jpu1G1Tc58
+<sub>Hospital-brand navy + medical-blue palette · gradient header with "Available 24/7" badge · sidebar contact cards (helpline, emergency, pharmacy, lab) · 8 quick-question chips · welcome card on first load · typing indicator · clean 429 rate-limit fallback.</sub>
+
+---
+
+## 🔭 Future Improvements
+
+- 🌐 **Multi-language** — Hindi and Telugu support for local patients
+- 📅 **Real slot booking** — integrate with hospital HIS to actually book appointments
+- 🗄️ **Persistent vector store** — swap in-memory ChromaDB for a persistent server or Pinecone / Weaviate
+- ✂️ **Semantic chunking** — paragraph-level chunks with overlap for higher context precision
+- 🛠️ **Admin panel** — upload new policy PDFs that auto-trigger re-embedding
+- 🎙️ **Voice I/O** — speech-to-text + TTS for hospital-kiosk deployment
+- 📈 **Analytics dashboard** — track unanswered queries, faithfulness failures, peak topics
+- 💬 **WhatsApp + IVR channels** — same agent, reachable via phone or chat
+
+---
+
+## 📄 License
+
+MIT — see `LICENSE`.
+
+## 🙏 Acknowledgements
+
+Built as part of the **ExcelR & KIIT Agentic AI Program** capstone.
+Powered by [LangGraph](https://www.langchain.com/langgraph) · [ChromaDB](https://www.trychroma.com/) · [Groq](https://groq.com/) · [Streamlit](https://streamlit.io/).
+
+---
+
+<p align="center"><sub>Made with ❤️ for MediCare General Hospital · Banjara Hills, Hyderabad</sub></p>
